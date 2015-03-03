@@ -121,6 +121,16 @@ final class Crypto
     const ENCRYPTION_INFO = 'DefusePHP|KeyForEncryption';
     const AUTHENTICATION_INFO = 'DefusePHP|KeyForAuthentication';
 
+    /* 
+     * An uncaught exception may leak parameter information (i.e. the key) in
+     * the stack trace. These variables hold singleton instances of the
+     * exception classes that were initialized in a safe environment when no key
+     * was present on the stack.
+     */
+    private static $InvalidCiphertextException;
+    private static $CannotPerformOperationException;
+    private static $CryptoTestFailedException;
+
     /*
      * Use this to generate a random encryption key.
      */
@@ -142,14 +152,14 @@ final class Crypto
 
         if (self::our_strlen($key) !== self::KEY_BYTE_SIZE)
         {
-            throw new CannotPerformOperationException("Bad key.");
+            throw self::$CannotPerformOperationException("Bad key.");
         }
 
         $method = self::CIPHER.'-'.self::CIPHER_MODE;
         
         self::EnsureFunctionExists('openssl_get_cipher_methods');
         if (in_array($method, openssl_get_cipher_methods()) === FALSE) {
-            throw new CannotPerformOperationException("Cipher method not supported.");
+            throw self::$CannotPerformOperationException("Cipher method not supported.");
         }
         
         // Generate a sub-key for encryption.
@@ -160,7 +170,7 @@ final class Crypto
         self::EnsureFunctionExists("openssl_cipher_iv_length");
         $ivsize = openssl_cipher_iv_length($method);
         if ($ivsize === FALSE || $ivsize <= 0) {
-            throw new CannotPerformOperationException();
+            throw self::$CannotPerformOperationException;
         }
         $iv = self::SecureRandom($ivsize);
 
@@ -188,20 +198,20 @@ final class Crypto
         
         self::EnsureFunctionExists('openssl_get_cipher_methods');
         if (in_array($method, openssl_get_cipher_methods()) === FALSE) {
-            throw new CannotPerformOperationException("Cipher method not supported.");
+            throw self::$CannotPerformOperationException("Cipher method not supported.");
         }
 
         // Extract the HMAC from the front of the ciphertext.
         if (self::our_strlen($ciphertext) <= self::MAC_BYTE_SIZE) {
-            throw new InvalidCiphertextException();
+            throw self::$InvalidCiphertextException;
         }
         $hmac = self::our_substr($ciphertext, 0, self::MAC_BYTE_SIZE);
         if ($hmac === FALSE) {
-            throw new CannotPerformOperationException();
+            throw self::$CannotPerformOperationException;
         }
         $ciphertext = self::our_substr($ciphertext, self::MAC_BYTE_SIZE);
         if ($ciphertext === FALSE) {
-            throw new CannotPerformOperationException();
+            throw self::$CannotPerformOperationException;
         }
 
         // Regenerate the same authentication sub-key.
@@ -217,18 +227,18 @@ final class Crypto
             self::EnsureFunctionExists("openssl_cipher_iv_length");
             $ivsize = openssl_cipher_iv_length($method);
             if ($ivsize === FALSE || $ivsize <= 0) {
-                throw new CannotPerformOperationException();
+                throw self::$CannotPerformOperationException;
             }
             if (self::our_strlen($ciphertext) <= $ivsize) {
-                throw new InvalidCiphertextException();
+                throw self::$InvalidCiphertextException;
             }
             $iv = self::our_substr($ciphertext, 0, $ivsize);
             if ($iv === FALSE) {
-                throw new CannotPerformOperationException();
+                throw self::$CannotPerformOperationException;
             }
             $ciphertext = self::our_substr($ciphertext, $ivsize);
             if ($ciphertext === FALSE) {
-                throw new CannotPerformOperationException();
+                throw self::$CannotPerformOperationException;
             }
             
             $plaintext = self::PlainDecrypt($ciphertext, $ekey, $iv);
@@ -242,7 +252,7 @@ final class Crypto
              * a script that doesn't handle this condition to CRASH, instead
              * of thinking the ciphertext decrypted to the value FALSE.
              */
-             throw new InvalidCiphertextException();
+             throw self::$InvalidCiphertextException;
         }
     }
 
@@ -272,11 +282,11 @@ final class Crypto
 
             self::TestEncryptDecrypt();
             if (self::our_strlen(self::CreateNewRandomKey()) != self::KEY_BYTE_SIZE) {
-                throw new CryptoTestFailedException();
+                throw self::$CryptoTestFailedException;
             }
 
             if (self::ENCRYPTION_INFO == self::AUTHENTICATION_INFO) {
-                throw new CryptoTestFailedException();
+                throw self::$CryptoTestFailedException;
             }
         } catch (CryptoTestFailedException $ex) {
             // Do this, otherwise it will stay in the "tests are running" state.
@@ -307,7 +317,7 @@ final class Crypto
         );
         
         if ($ciphertext === false) {
-            throw new CannotPerformOperationException();
+            throw self::$CannotPerformOperationException;
         }
 
         return $ciphertext;
@@ -331,7 +341,7 @@ final class Crypto
             $iv
         );
         if ($plaintext === FALSE) {
-            throw new CannotPerformOperationException();
+            throw self::$CannotPerformOperationException;
         }
         
         return $plaintext;
@@ -345,7 +355,7 @@ final class Crypto
         self::EnsureFunctionExists("mcrypt_create_iv");
         $random = mcrypt_create_iv($octets, MCRYPT_DEV_URANDOM);
         if ($random === FALSE) {
-            throw new CannotPerformOperationException();
+            throw self::$CannotPerformOperationException;
         } else {
             return $random;
         }
@@ -366,7 +376,7 @@ final class Crypto
         // Sanity-check the desired output length.
         if (empty($length) || !is_int($length) ||
             $length < 0 || $length > 255 * $digest_length) {
-            throw new CannotPerformOperationException();
+            throw self::$CannotPerformOperationException;
         }
 
         // "if [salt] not provided, is set to a string of HashLen zeroes."
@@ -383,7 +393,7 @@ final class Crypto
 
         // This check is useless, but it serves as a reminder to the spec.
         if (self::our_strlen($prk) < $digest_length) {
-            throw new CannotPerformOperationException();
+            throw self::$CannotPerformOperationException;
         }
 
         // T(0) = ''
@@ -404,7 +414,7 @@ final class Crypto
         // ORM = first L octets of T
         $orm = self::our_substr($t, 0, $length);
         if ($orm === FALSE) {
-            throw new CannotPerformOperationException();
+            throw self::$CannotPerformOperationException;
         }
         return $orm;
     }
@@ -422,7 +432,7 @@ final class Crypto
         // NOTE: This leaks information when the strings are not the same
         // length, but they should always be the same length here. Enforce it:
         if (self::our_strlen($correct_hmac) !== self::our_strlen($message_hmac)) {
-            throw new CannotPerformOperationException();
+            throw self::$CannotPerformOperationException;
         }
 
         $blind = self::CreateNewRandomKey();
@@ -444,24 +454,24 @@ final class Crypto
             // It's important to catch this and change it into a 
             // CryptoTestFailedException, otherwise a test failure could trick
             // the user into thinking it's just an invalid ciphertext!
-            throw new CryptoTestFailedException();
+            throw self::$CryptoTestFailedException;
         }
         if($decrypted !== $data)
         {
-            throw new CryptoTestFailedException();
+            throw self::$CryptoTestFailedException;
         }
 
         // Modifying the ciphertext: Appending a string.
         try {
             self::Decrypt($ciphertext . "a", $key);
-            throw new CryptoTestFailedException();
+            throw self::$CryptoTestFailedException;
         } catch (InvalidCiphertextException $e) { /* expected */ }
 
         // Modifying the ciphertext: Changing an IV byte.
         try {
             $ciphertext[0] = chr((ord($ciphertext[0]) + 1) % 256);
             self::Decrypt($ciphertext, $key);
-            throw new CryptoTestFailedException();
+            throw self::$CryptoTestFailedException;
         } catch (InvalidCiphertextException $e) { /* expected */ }
 
         // Decrypting with the wrong key.
@@ -471,7 +481,7 @@ final class Crypto
         $wrong_key = self::CreateNewRandomKey();
         try {
             self::Decrypt($ciphertext, $wrong_key);
-            throw new CryptoTestFailedException();
+            throw self::$CryptoTestFailedException;
         } catch (InvalidCiphertextException $e) { /* expected */ }
 
         // Ciphertext too small (shorter than HMAC).
@@ -479,7 +489,7 @@ final class Crypto
         $ciphertext = str_repeat("A", self::MAC_BYTE_SIZE - 1);
         try {
             self::Decrypt($ciphertext, $key);
-            throw new CryptoTestFailedException();
+            throw self::$CryptoTestFailedException;
         } catch (InvalidCiphertextException $e) { /* expected */ }
     }
 
@@ -499,7 +509,7 @@ final class Crypto
         );
         $computed_okm = self::HKDF("sha256", $ikm, $length, $info, $salt);
         if ($computed_okm !== $okm) {
-            throw new CryptoTestFailedException();
+            throw self::$CryptoTestFailedException;
         }
 
         // Test Case 7
@@ -512,7 +522,7 @@ final class Crypto
         );
         $computed_okm = self::HKDF("sha1", $ikm, $length);
         if ($computed_okm !== $okm) {
-            throw new CryptoTestFailedException();
+            throw self::$CryptoTestFailedException;
         }
 
     }
@@ -524,7 +534,7 @@ final class Crypto
         $data = "Hi There";
         $correct = "b0344c61d8db38535ca8afceaf0bf12b881dc200c9833da726e9376c2e32cff7";
         if (hash_hmac(self::HASH_FUNCTION, $data, $key) != $correct) {
-            throw new CryptoTestFailedException();
+            throw self::$CryptoTestFailedException;
         }
     }
 
@@ -556,12 +566,12 @@ final class Crypto
 
         $computed_ciphertext = self::PlainEncrypt($plaintext, $key, $iv);
         if ($computed_ciphertext !== $ciphertext) {
-            throw new CryptoTestFailedException();
+            throw self::$CryptoTestFailedException;
         }
 
         $computed_plaintext = self::PlainDecrypt($ciphertext, $key, $iv);
         if ($computed_plaintext !== $plaintext) {
-            throw new CryptoTestFailedException();
+            throw self::$CryptoTestFailedException;
         }
     }
 
@@ -574,14 +584,14 @@ final class Crypto
     private static function EnsureConstantExists($name)
     {
         if (!defined($name)) {
-            throw new CannotPerformOperationException();
+            throw self::$CannotPerformOperationException;
         }
     }
     
     private static function EnsureFunctionExists($name)
     {
         if (!function_exists($name)) {
-            throw new CannotPerformOperationException();
+            throw self::$CannotPerformOperationException;
         }
     }
 
@@ -596,7 +606,7 @@ final class Crypto
         if (function_exists('mb_strlen')) {
             $length = mb_strlen($str, '8bit');
             if ($length === FALSE) {
-                throw new CannotPerformOperationException();
+                throw self::$CannotPerformOperationException;
             }
             return $length;
         } else {
@@ -629,49 +639,13 @@ final class Crypto
         }
     }
 
+    public static function InitializeSafeExceptions()
+    {
+        self::$InvalidCiphertextException = new InvalidCiphertextException();
+        self::$CannotPerformOperationException = new CannotPerformOperationException();
+        self::$CryptoTestFailedException = new CryptoTestFailedException();
+    }
+
 }
 
-/*
- * We want to catch all uncaught exceptions that come from the Crypto class,
- * since by default, PHP will leak the key in the stack trace from an uncaught
- * exception. This is a really ugly hack, but I think it's justified.
- *
- * Everything up to handler() getting called should be reliable, so this should
- * reliably suppress the stack traces. The rest is just a bonus so that we don't
- * make it impossible to debug other exceptions.
- *
- * This bit of code was adapted from: http://stackoverflow.com/a/7939492
- */
-
-class CryptoExceptionHandler
-{
-    private $rethrow = NULL;
-
-    public function __construct()
-    {
-        set_exception_handler(array($this, "handler"));
-    }
-
-    public function handler($ex)
-    {
-        if (
-            $ex instanceof InvalidCiphertextException ||
-            $ex instanceof CannotPerformOperationException ||
-            $ex instanceof CryptoTestFailedException
-        ) {
-            echo "FATAL ERROR: Uncaught crypto exception. Suppresssing output.\n";
-        } else {
-            /* Re-throw the exception in the destructor. */
-            $this->rethrow = $ex;
-        }
-    }
-
-    public function __destruct() {
-        if ($this->rethrow) {
-            throw $this->rethrow;
-        }
-    }
-}
-
-$crypto_exception_handler_object_dont_touch_me = new CryptoExceptionHandler();
-
+Crypto::InitializeSafeExceptions();
