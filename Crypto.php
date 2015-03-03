@@ -152,14 +152,14 @@ final class Crypto
 
         if (self::our_strlen($key) !== self::KEY_BYTE_SIZE)
         {
-            throw self::$CannotPerformOperationException("Bad key.");
+            throw self::$CannotPerformOperationException;
         }
 
         $method = self::CIPHER.'-'.self::CIPHER_MODE;
         
         self::EnsureFunctionExists('openssl_get_cipher_methods');
         if (in_array($method, openssl_get_cipher_methods()) === FALSE) {
-            throw self::$CannotPerformOperationException("Cipher method not supported.");
+            throw self::$CannotPerformOperationException;
         }
         
         // Generate a sub-key for encryption.
@@ -198,7 +198,7 @@ final class Crypto
         
         self::EnsureFunctionExists('openssl_get_cipher_methods');
         if (in_array($method, openssl_get_cipher_methods()) === FALSE) {
-            throw self::$CannotPerformOperationException("Cipher method not supported.");
+            throw self::$CannotPerformOperationException;
         }
 
         // Extract the HMAC from the front of the ciphertext.

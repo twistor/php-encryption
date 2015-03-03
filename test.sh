@@ -7,6 +7,7 @@ if [ $? -ne 0 ]; then
     echo "FAIL."
     exit 1
 fi
+
 echo "--------------------------------------------------"
 
 echo ""
@@ -19,8 +20,25 @@ if [ $? -ne 0 ]; then
     exit 1
 fi
 echo "--------------------------------------------------"
-
 echo ""
+
+
+if ! ./tests/check_exception_output.sh invalid_ciphertext; then
+    echo "FAIL."
+    exit 1
+fi
+
+if ! ./tests/check_exception_output.sh bad_key; then
+    echo "FAIL."
+    exit 1
+fi
+
+if ! ./tests/check_exception_output.sh tampered_ciphertext; then
+    echo "FAIL."
+    exit 1
+fi
+
+echo "PASS: Safe exceptions."
 
 if [ -z "$(php Crypto.php)" ]; then
     echo "PASS: Crypto.php output is empty."
