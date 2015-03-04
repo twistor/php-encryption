@@ -84,16 +84,31 @@
  *       }
  */
 
+class CryptoException extends Exception {
+    public function __construct($message = "") {
+        parent::__construct($message);
+        $original = set_exception_handler(function($e) use (&$original) {
+            if ($original) {
+                $original($e);
+            }
+            error_log("Uncaught crypto exception: " . $e->getMessage());
+        });
+    }
+    public function __destruct() {
+        restore_exception_handler();
+    }
+}
+
 /* 
  * Raised by Decrypt() when one of the following conditions are met:
  *  - The key is wrong.
  *  - The ciphertext is invalid or not in the correct format.
  *  - The attacker modified the ciphertext.
  */
-class InvalidCiphertextException extends Exception {}
+class InvalidCiphertextException extends CryptoException {}
 /* If you see these, it means it is NOT SAFE to do encryption on your system. */
-class CannotPerformOperationException extends Exception {}
-class CryptoTestFailedException extends Exception {}
+class CannotPerformOperationException extends CryptoException {}
+class CryptoTestFailedException extends CryptoException {}
 
 final class Crypto
 {
@@ -630,48 +645,3 @@ final class Crypto
     }
 
 }
-
-/*
- * We want to catch all uncaught exceptions that come from the Crypto class,
- * since by default, PHP will leak the key in the stack trace from an uncaught
- * exception. This is a really ugly hack, but I think it's justified.
- *
- * Everything up to handler() getting called should be reliable, so this should
- * reliably suppress the stack traces. The rest is just a bonus so that we don't
- * make it impossible to debug other exceptions.
- *
- * This bit of code was adapted from: http://stackoverflow.com/a/7939492
- */
-
-class CryptoExceptionHandler
-{
-    private $rethrow = NULL;
-
-    public function __construct()
-    {
-        set_exception_handler(array($this, "handler"));
-    }
-
-    public function handler($ex)
-    {
-        if (
-            $ex instanceof InvalidCiphertextException ||
-            $ex instanceof CannotPerformOperationException ||
-            $ex instanceof CryptoTestFailedException
-        ) {
-            echo "FATAL ERROR: Uncaught crypto exception. Suppresssing output.\n";
-        } else {
-            /* Re-throw the exception in the destructor. */
-            $this->rethrow = $ex;
-        }
-    }
-
-    public function __destruct() {
-        if ($this->rethrow) {
-            throw $this->rethrow;
-        }
-    }
-}
-
-$crypto_exception_handler_object_dont_touch_me = new CryptoExceptionHandler();
-
