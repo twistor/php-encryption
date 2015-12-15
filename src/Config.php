@@ -15,7 +15,7 @@ class Config
     private $encryption_info_string;
     private $authentication_info_string;
 
-    public function __construct($config_array)
+    public function __construct(array $config_array)
     {
         $expected_keys = array(
             "cipher_method",

@@ -346,11 +346,11 @@ class Crypto
      * @param string $plaintext
      * @param string $key
      * @param string $iv
-     * @param array $config
+     * @param \Defuse\Crypto\Config $config
      * @return string
      * @throws Ex\CannotPerformOperationException
      */
-    protected static function plainEncrypt($plaintext, $key, $iv, $config)
+    protected static function plainEncrypt($plaintext, $key, $iv, Config $config)
     {
         Core::ensureConstantExists("OPENSSL_RAW_DATA");
         Core::ensureFunctionExists("openssl_encrypt");
@@ -379,11 +379,11 @@ class Crypto
      * @param string $ciphertext
      * @param string $key
      * @param string $iv
-     * @param array $config
+     * @param \Defuse\Crypto\Config $config
      * @return string
      * @throws Ex\CannotPerformOperationException
      */
-    protected static function plainDecrypt($ciphertext, $key, $iv, $config)
+    protected static function plainDecrypt($ciphertext, $key, $iv, Config $config)
     {
         Core::ensureConstantExists("OPENSSL_RAW_DATA");
         Core::ensureFunctionExists("openssl_decrypt");
@@ -409,10 +409,11 @@ class Crypto
      * @param string $correct_hmac HMAC string (raw binary)
      * @param string $message Ciphertext (raw binary)
      * @param string $key Authentication key (raw binary)
+     * @param \Defuse\Crypto\Config $config
      * @return boolean
      * @throws Ex\CannotPerformOperationException
      */
-    protected static function verifyHMAC($correct_hmac, $message, $key, $config)
+    protected static function verifyHMAC($correct_hmac, $message, $key, Config $config)
     {
         $message_hmac = \hash_hmac($config->hashFunctionName(), $message, $key, true);
         return Core::hashEquals($correct_hmac, $message_hmac);

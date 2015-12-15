@@ -20,10 +20,11 @@ final class Core
      *
      * @param string $ctr - raw binary
      * @param int $inc - how much?
+     * @param \Defuse\Crypto\Config $config
      *
      * @return string (raw binary)
      */
-    public static function incrementCounter($ctr, $inc, &$config)
+    public static function incrementCounter($ctr, $inc, Config $config)
     {
         static $ivsize = null;
         if ($ivsize === null) {
@@ -101,10 +102,11 @@ final class Core
      * @param int $length How many bytes?
      * @param string $info What sort of key are we deriving?
      * @param string $salt
+     * @param \Defuse\Crypto\Config $config
      * @return string
      * @throws Ex\CannotPerformOperationException
      */
-    public static function HKDF($hash, $ikm, $length, $info = '', $salt = null, $config = null)
+    public static function HKDF($hash, $ikm, $length, $info = '', $salt = null, Config $config = null)
     {
         // Find the correct digest length as quickly as we can.
         $digest_length = $config->macByteSize();

@@ -8,7 +8,7 @@ class FileConfig extends Config
 {
     private $buffer_byte_size;
 
-    public function __construct($config_array)
+    public function __construct(array $config_array)
     {
         if (!array_key_exists("buffer_byte_size", $config_array)) {
             throw new Ex\CannotPerformOperationException(

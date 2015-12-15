@@ -74,7 +74,7 @@ class RuntimeTests extends Crypto
         $test_state = 1;
     }
 
-    private static function testEncryptDecrypt($config)
+    private static function testEncryptDecrypt(Config $config = null)
     {
         $key = Crypto::createNewRandomKey();
         $data = "EnCrYpT EvErYThInG\x00\x00";
@@ -133,7 +133,7 @@ class RuntimeTests extends Crypto
      *
      * @throws Ex\CryptoTestFailedException
      */
-    private static function HKDFTestVector($config)
+    private static function HKDFTestVector(Config $config = null)
     {
         // HKDF test vectors from RFC 5869
         if (empty($config)) {
@@ -175,7 +175,7 @@ class RuntimeTests extends Crypto
      *
      * @throws Ex\CryptoTestFailedException
      */
-    private static function HMACTestVector($config)
+    private static function HMACTestVector(Config $config = null)
     {
         if (empty($config)) {
             $config = Crypto::getVersionConfigFromHeader(Core::CURRENT_VERSION, Core::CURRENT_VERSION);
@@ -194,8 +194,12 @@ class RuntimeTests extends Crypto
      *
      * @throws Ex\CryptoTestFailedException
      */
-    private static function AESTestVector($config)
+    private static function AESTestVector(Config $config = null)
     {
+        if (empty($config)) {
+            $config = Crypto::getVersionConfigFromHeader(Core::CURRENT_VERSION, Core::CURRENT_VERSION);
+        }
+
         // AES CTR mode test vector from NIST SP 800-38A
         $key = Encoding::hexToBin(
             "603deb1015ca71be2b73aef0857d7781".
@@ -214,8 +218,6 @@ class RuntimeTests extends Crypto
             "2b0930daa23de94ce87017ba2d84988d".
             "dfc9c58db67aada613c2dd08457941a6"
         );
-
-        $config = Crypto::getVersionConfigFromHeader(Core::CURRENT_VERSION, Core::CURRENT_VERSION);
 
         $computed_ciphertext = Crypto::plainEncrypt($plaintext, $key, $iv, $config);
         if ($computed_ciphertext !== $ciphertext) {

@@ -11,7 +11,7 @@ final class KeyConfig
     private $checksum_hash_function;
     private $checksum_byte_size;
 
-    public function __construct($config_array)
+    public function __construct(array $config_array)
     {
         $expected_keys = array(
             "key_byte_size",
